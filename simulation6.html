@@ -1,0 +1,149 @@
+<html><head><base href="https://websim.ai/ball-throw-simulation" />
+<title>Ball Throw Simulation with Impact Data</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: #f0f0f0;
+}
+.simulation-container {
+  width: 800px;
+  height: 600px;
+  position: relative;
+  background-image: url('https://websim.ai/images/sky-earth-background.jpg');
+  background-size: cover;
+  border: 2px solid #333;
+  overflow: hidden;
+}
+#ball {
+  width: 20px;
+  height: 20px;
+  background-color: red;
+  border-radius: 50%;
+  position: absolute;
+}
+.axis {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+#vertical-axis {
+  width: 2px;
+  height: 100%;
+  left: 50px;
+}
+#horizontal-axis {
+  width: calc(100% - 50px);
+  height: 2px;
+  bottom: 50px;
+  right: 0;
+}
+.control {
+  margin: 10px 0;
+}
+input[type="range"] {
+  width: 300px;
+}
+#impact-data {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+}
+</style>
+</head>
+<body>
+<h1>Ball Throw Simulation with Impact Data</h1>
+<div class="simulation-container">
+  <div id="ball"></div>
+  <div id="vertical-axis" class="axis"></div>
+  <div id="horizontal-axis" class="axis"></div>
+  <div id="impact-data">
+    <p>Distance: <span id="distance">0</span> m</p>
+    <p>Impact Speed: <span id="impact-speed">0</span> m/s</p>
+  </div>
+</div>
+<div class="controls">
+  <div class="control">
+    <label for="height">Initial Height (m): </label>
+    <input type="range" id="height" min="1" max="10" value="5" step="0.1">
+    <span id="height-value">5</span>
+  </div>
+  <div class="control">
+    <label for="speed">Initial Speed (m/s): </label>
+    <input type="range" id="speed" min="1" max="20" value="10" step="0.1">
+    <span id="speed-value">10</span>
+  </div>
+  <button id="throw-button">Throw Ball</button>
+</div>
+
+<script>
+const ball = document.getElementById('ball');
+const heightSlider = document.getElementById('height');
+const speedSlider = document.getElementById('speed');
+const heightValue = document.getElementById('height-value');
+const speedValue = document.getElementById('speed-value');
+const throwButton = document.getElementById('throw-button');
+const distanceSpan = document.getElementById('distance');
+const impactSpeedSpan = document.getElementById('impact-speed');
+
+const g = 9.81; // Acceleration due to gravity (m/s^2)
+const pixelsPerMeter = 50; // Scale factor
+
+let animationId;
+
+function updateSliderValues() {
+  heightValue.textContent = heightSlider.value;
+  speedValue.textContent = speedSlider.value;
+}
+
+function resetBall() {
+  const height = parseFloat(heightSlider.value);
+  ball.style.bottom = `${height * pixelsPerMeter + 50}px`;
+  ball.style.left = '50px';
+  distanceSpan.textContent = '0';
+  impactSpeedSpan.textContent = '0';
+}
+
+function throwBall() {
+  cancelAnimationFrame(animationId);
+  
+  const initialHeight = parseFloat(heightSlider.value);
+  const initialSpeed = parseFloat(speedSlider.value);
+  const initialY = initialHeight * pixelsPerMeter + 50;
+  let t = 0;
+  
+  function animate() {
+    t += 0.016; // Approximately 60 FPS
+    
+    const x = initialSpeed * t * pixelsPerMeter + 50;
+    const y = initialY - (0.5 * g * t * t * pixelsPerMeter);
+    
+    ball.style.left = `${x}px`;
+    ball.style.bottom = `${y}px`;
+    
+    if (y > 50) {
+      animationId = requestAnimationFrame(animate);
+    } else {
+      // Ball has hit the ground
+      const distance = initialSpeed * Math.sqrt(2 * initialHeight / g);
+      const impactSpeed = Math.sqrt(initialSpeed * initialSpeed + 2 * g * initialHeight);
+      
+      distanceSpan.textContent = distance.toFixed(2);
+      impactSpeedSpan.textContent = impactSpeed.toFixed(2);
+    }
+  }
+  
+  animate();
+}
+
+heightSlider.addEventListener('input', updateSliderValues);
+speedSlider.addEventListener('input', updateSliderValues);
+throwButton.addEventListener('click', throwBall);
+
+updateSliderValues();
+resetBall();
+</script>
+</body></html>

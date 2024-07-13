@@ -1,0 +1,237 @@
+<html><head><base href="https://physics-motion-study.edu/complex-motion/table-graph-analysis"><title>ניתוח תנועה מורכבת - טבלאות וגרפים</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/regression/2.0.1/regression.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #F8E6FF; /* Very light purple background */
+            position: relative;
+            min-height: 100vh;
+        }
+        header {
+            background-color: #4B0082; /* Dark eggplant purple */
+            color: white;
+            text-align: center;
+            padding: 1.5em;
+            margin-bottom: 2em;
+            position: relative;
+        }
+        .header-caption {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2em;
+            color: #FFF;
+            font-weight: bold;
+        }
+        h1, h2 {
+            margin: 0;
+        }
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            padding-bottom: 20px;
+        }
+        .data-input, .visualization, .equations {
+            flex-basis: 100%;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #4B0082; /* Dark eggplant purple */
+            color: white;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+        }
+        button {
+            background-color: #4B0082; /* Dark eggplant purple */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #graph {
+            width: 100%;
+            height: 400px;
+        }
+        .equation {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ניתוח תנועה מורכבת - טבלאות וגרפים</h1>
+        <div class="header-caption">Made by IrisPelled</div>
+    </header>
+    <div class="content">
+        <div class="data-input">
+            <h2>הזנת נתונים</h2>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>זמן (שניות)</th>
+                        <th>מיקום (מטרים)</th>
+                        <th>מהירות רגעית (מטר/שניה)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
+            <button id="addRow">הוסף שורה</button>
+            <button id="analyze">נתח נתונים</button>
+        </div>
+        <div class="visualization">
+            <h2>ויזואליזציה</h2>
+            <div id="graph"></div>
+        </div>
+        <div class="equations">
+            <h2>משוואות התאמה</h2>
+            <div id="positionEquation" class="equation"></div>
+            <div id="velocityEquation" class="equation"></div>
+        </div>
+    </div>
+
+    <script>
+        let rowCount = 0;
+        const dataTable = document.getElementById('dataTable');
+        const addRowButton = document.getElementById('addRow');
+        const analyzeButton = document.getElementById('analyze');
+
+        function addRow() {
+            const row = dataTable.insertRow(-1);
+            for (let i = 0; i < 3; i++) {
+                const cell = row.insertCell(i);
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.step = '0.1';
+                if (i === 0) {
+                    input.value = rowCount;
+                }
+                if (i === 2) {
+                    input.disabled = true;
+                }
+                cell.appendChild(input);
+            }
+            rowCount++;
+        }
+
+        function calculateInstantaneousVelocity() {
+            for (let i = 1; i < dataTable.rows.length - 1; i++) {
+                const prevRow = dataTable.rows[i-1];
+                const currentRow = dataTable.rows[i];
+                const nextRow = dataTable.rows[i+1];
+                
+                const prevTime = parseFloat(prevRow.cells[0].firstChild.value);
+                const nextTime = parseFloat(nextRow.cells[0].firstChild.value);
+                const prevPosition = parseFloat(prevRow.cells[1].firstChild.value);
+                const nextPosition = parseFloat(nextRow.cells[1].firstChild.value);
+                
+                const deltaTime = nextTime - prevTime;
+                const deltaPosition = nextPosition - prevPosition;
+                const velocity = deltaPosition / deltaTime;
+                
+                currentRow.cells[2].firstChild.value = velocity.toFixed(2);
+            }
+        }
+
+        function fitCurve(x, y) {
+            const linear = regression.linear(x.map((xi, i) => [xi, y[i]]));
+            const quadratic = regression.polynomial(x.map((xi, i) => [xi, y[i]]), { order: 2 });
+            
+            return linear.r2 > quadratic.r2 ? linear : quadratic;
+        }
+
+        function formatEquation(result) {
+            if (result.equation.length === 2) {
+                const [m, b] = result.equation;
+                return `y = ${m.toFixed(2)}x ${b >= 0 ? '+' : '-'} ${Math.abs(b).toFixed(2)}`;
+            } else {
+                const [a, b, c] = result.equation;
+                return `y = ${a.toFixed(2)}x² ${b >= 0 ? '+' : '-'} ${Math.abs(b).toFixed(2)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c).toFixed(2)}`;
+            }
+        }
+
+        function analyzeData() {
+            calculateInstantaneousVelocity();
+
+            const times = [];
+            const positions = [];
+            const velocities = [];
+
+            for (let i = 1; i < dataTable.rows.length; i++) {
+                const row = dataTable.rows[i];
+                times.push(parseFloat(row.cells[0].firstChild.value));
+                positions.push(parseFloat(row.cells[1].firstChild.value));
+                if (row.cells[2].firstChild.value) {
+                    velocities.push(parseFloat(row.cells[2].firstChild.value));
+                }
+            }
+
+            const positionFit = fitCurve(times, positions);
+            const velocityFit = fitCurve(times.slice(1, -1), velocities);
+
+            const trace1 = {
+                x: times,
+                y: positions,
+                mode: 'lines+markers',
+                name: 'מיקום'
+            };
+
+            const trace2 = {
+                x: times.slice(1, -1),
+                y: velocities,
+                mode: 'lines+markers',
+                name: 'מהירות רגעית'
+            };
+
+            const layout = {
+                title: 'מיקום ומהירות רגעית כפונקציה של הזמן',
+                xaxis: {title: 'זמן (שניות)'},
+                yaxis: {title: 'מיקום (מטרים) / מהירות (מטר/שניה)'}
+            };
+
+            Plotly.newPlot('graph', [trace1, trace2], layout);
+
+            document.getElementById('positionEquation').textContent = `משוואת המיקום: ${formatEquation(positionFit)}`;
+            document.getElementById('velocityEquation').textContent = `משוואת המהירות: ${formatEquation(velocityFit)}`;
+        }
+
+        addRowButton.addEventListener('click', addRow);
+        analyzeButton.addEventListener('click', analyzeData);
+
+        // Initialize with 5 rows
+        for (let i = 0; i < 5; i++) {
+            addRow();
+        }
+    </script>
+</body></html>

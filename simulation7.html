@@ -1,0 +1,183 @@
+<html><head><base href="https://websim.ai" />
+<title>Ball Throw Simulator with Background</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+  }
+  .simulator {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  canvas {
+    border: 1px solid #ddd;
+  }
+  .controls {
+    margin-top: 20px;
+  }
+  input[type="range"] {
+    width: 200px;
+  }
+</style>
+</head>
+<body>
+<div class="simulator">
+  <canvas id="canvas" width="400" height="600"></canvas>
+  <div class="controls">
+    <label for="height">Initial Height (m): <span id="heightValue">1</span></label><br>
+    <input type="range" id="height" min="0" max="5" step="0.1" value="1"><br>
+    <label for="speed">Initial Speed (m/s): <span id="speedValue">5</span></label><br>
+    <input type="range" id="speed" min="0" max="20" step="0.1" value="5"><br>
+    <button id="throw">Throw Ball</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const heightSlider = document.getElementById('height');
+const speedSlider = document.getElementById('speed');
+const heightValue = document.getElementById('heightValue');
+const speedValue = document.getElementById('speedValue');
+const throwButton = document.getElementById('throw');
+
+const g = 9.81; // Acceleration due to gravity (m/s^2)
+const pixelsPerMeter = 100; // Scale factor
+
+let girlImage = new Image();
+girlImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSIxMDAiPjxjaXJjbGUgY3g9IjI1IiBjeT0iMTUiIHI9IjEwIiBmaWxsPSIjZmZjY2NjIi8+PHJlY3QgeD0iMTUiIHk9IjI1IiB3aWR0aD0iMjAiIGhlaWdodD0iNDAiIGZpbGw9IiNmZjk5OTkiLz48cmVjdCB4PSIxMCIgeT0iNjUiIHdpZHRoPSIxMCIgaGVpZ2h0PSIzMCIgZmlsbD0iI2ZmY2NjYyIvPjxyZWN0IHg9IjMwIiB5PSI2NSIgd2lkdGg9IjEwIiBoZWlnaHQ9IjMwIiBmaWxsPSIjZmZjY2NjIi8+PC9zdmc+';
+
+let ballY, ballSpeed, maxHeight, time;
+let initialHeight, initialSpeed, animationId;
+let measureBarHeight;
+let maxHeightReached = 0;
+
+function drawBackground() {
+  // Sky
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
+  
+  // Sun
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(50, 50, 30, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Grass
+  ctx.fillStyle = '#7CFC00';
+  ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
+}
+
+function drawScene() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  drawBackground();
+  
+  // Draw ruler
+  ctx.beginPath();
+  ctx.moveTo(50, 0);
+  ctx.lineTo(50, canvas.height);
+  ctx.strokeStyle = 'black';
+  ctx.stroke();
+  
+  for (let i = 0; i <= canvas.height; i += pixelsPerMeter) {
+    ctx.beginPath();
+    ctx.moveTo(45, i);
+    ctx.lineTo(55, i);
+    ctx.stroke();
+    ctx.fillStyle = 'black';
+    ctx.fillText((canvas.height - i) / pixelsPerMeter, 10, i);
+  }
+  
+  // Draw girl
+  ctx.drawImage(girlImage, canvas.width - 70, canvas.height - 120, 50, 100);
+  
+  // Draw ball
+  if (ballY !== undefined) {
+    ctx.beginPath();
+    ctx.arc(canvas.width - 45, canvas.height - ballY, 10, 0, Math.PI * 2);
+    ctx.fillStyle = 'red';
+    ctx.fill();
+  }
+  
+  // Draw measure bar
+  if (measureBarHeight !== undefined) {
+    ctx.beginPath();
+    ctx.moveTo(50, canvas.height - measureBarHeight);
+    ctx.lineTo(canvas.width, canvas.height - measureBarHeight);
+    ctx.strokeStyle = 'red';
+    ctx.stroke();
+    ctx.fillStyle = 'red';
+    ctx.fillText(`Height: ${(measureBarHeight / pixelsPerMeter).toFixed(2)}m`, 60, canvas.height - measureBarHeight - 10);
+  }
+  
+  // Draw max height line
+  if (maxHeightReached > 0) {
+    ctx.beginPath();
+    ctx.moveTo(50, canvas.height - maxHeightReached);
+    ctx.lineTo(canvas.width, canvas.height - maxHeightReached);
+    ctx.strokeStyle = 'blue';
+    ctx.stroke();
+    ctx.fillStyle = 'blue';
+    ctx.fillText(`Max Height: ${(maxHeightReached / pixelsPerMeter).toFixed(2)}m`, 60, canvas.height - maxHeightReached - 25);
+  }
+}
+
+function updateBall() {
+  time += 1/60;
+  ballY = initialHeight * pixelsPerMeter + initialSpeed * time * pixelsPerMeter - 0.5 * g * time * time * pixelsPerMeter;
+  
+  if (ballY > maxHeight) {
+    maxHeight = ballY;
+    measureBarHeight = maxHeight;
+    maxHeightReached = maxHeight;
+  }
+  
+  if (ballY <= 0) {
+    ballY = 0;
+    measureBarHeight = 0;
+    cancelAnimationFrame(animationId);
+  } else {
+    animationId = requestAnimationFrame(updateBall);
+  }
+  
+  drawScene();
+}
+
+throwButton.addEventListener('click', () => {
+  initialHeight = parseFloat(heightSlider.value);
+  initialSpeed = parseFloat(speedSlider.value);
+  ballY = initialHeight * pixelsPerMeter;
+  maxHeight = ballY;
+  measureBarHeight = ballY;
+  maxHeightReached = 0;
+  time = 0;
+  if (animationId) cancelAnimationFrame(animationId);
+  updateBall();
+});
+
+heightSlider.addEventListener('input', () => {
+  heightValue.textContent = heightSlider.value;
+  initialHeight = parseFloat(heightSlider.value);
+  measureBarHeight = initialHeight * pixelsPerMeter;
+  maxHeightReached = 0;
+  drawScene();
+});
+
+speedSlider.addEventListener('input', () => {
+  speedValue.textContent = speedSlider.value;
+});
+
+// Initial setup
+initialHeight = parseFloat(heightSlider.value);
+measureBarHeight = initialHeight * pixelsPerMeter;
+drawScene();
+</script>
+</body></html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Particle Movement Simulation with Pressure Control</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="simulation-container">
+        <div id="canvas-container"></div>
+        <div id="controls">
+            <label for="temperature">Temperature: </label>
+            <input type="range" id="temperature" min="0" max="100" value="50">
+            <br>
+            <label for="pressure">Pressure: </label>
+            <input type="range" id="pressure" min="0" max="100" value="0">
+            <br>
+            <label for="mode">Mode: </label>
+            <select id="mode">
+                <option value="gas">Gas Accumulation</option>
+                <option value="liquid">Liquid Accumulation</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        let particles = [];
+        let temperature = 50;
+        let pressure = 0;
+        let mode = 'gas';
+        let upperBorder;
+        let lowerBorder;
+        let leftBorder = 50;
+        let rightBorder = 350;
+        let colors = ['#FF69B4', '#4169E1', '#32CD32']; // Pink, Blue, Green
+
+        function setup() {
+            const canvas = createCanvas(400, 400);
+            canvas.parent('canvas-container');
+            upperBorder = 50;
+            lowerBorder = 350;
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+
+            const temperatureSlider = document.getElementById('temperature');
+            temperatureSlider.addEventListener('input', (event) => {
+                temperature = event.target.value;
+            });
+
+            const pressureSlider = document.getElementById('pressure');
+            pressureSlider.addEventListener('input', (event) => {
+                pressure = event.target.value;
+                updateUpperBorder();
+            });
+
+            const modeSelect = document.getElementById('mode');
+            modeSelect.addEventListener('change', (event) => {
+                mode = event.target.value;
+            });
+        }
+
+        function updateUpperBorder() {
+            upperBorder = map(pressure, 0, 100, 50, 200);
+        }
+
+        function draw() {
+            background(220);
+            drawBorders();
+            for (let particle of particles) {
+                particle.update();
+                particle.display();
+            }
+        }
+
+        function drawBorders() {
+            stroke(0);
+            strokeWeight(2);
+            line(leftBorder, upperBorder, rightBorder, upperBorder);
+            line(leftBorder, lowerBorder, rightBorder, lowerBorder);
+            line(leftBorder, upperBorder, leftBorder, lowerBorder);
+            line(rightBorder, upperBorder, rightBorder, lowerBorder);
+        }
+
+        class Particle {
+            constructor() {
+                this.position = createVector(random(leftBorder, rightBorder), random(upperBorder, lowerBorder));
+                this.velocity = p5.Vector.random2D();
+                this.color = random(colors);
+            }
+
+            update() {
+                const speedMultiplier = map(temperature, 0, 100, 1, 5); // Increased speed range
+                const confinementFactor = map(pressure, 0, 100, 1, 2);
+                const speed = speedMultiplier * confinementFactor;
+                this.velocity.setMag(speed);
+                this.position.add(this.velocity);
+
+                if (mode === 'liquid' && this.position.y > lowerBorder - 50) {
+                    this.position.y = lowerBorder - 50;
+                    this.velocity.y *= -0.8;
+                }
+
+                if (this.position.x < leftBorder || this.position.x > rightBorder) {
+                    this.velocity.x *= -1;
+                }
+                if (this.position.y < upperBorder || this.position.y > lowerBorder) {
+                    this.velocity.y *= -1;
+                }
+
+                this.position.x = constrain(this.position.x, leftBorder, rightBorder);
+                this.position.y = constrain(this.position.y, upperBorder, lowerBorder);
+            }
+
+            display() {
+                noStroke();
+                fill(this.color);
+                ellipse(this.position.x, this.position.y, 8, 8);
+            }
+        }
+    </script>
+</body>
+</html>

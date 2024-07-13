@@ -1,0 +1,208 @@
+<html><head><base href="https://physics-motion-study.edu/trigonometry"><title>סימולציית מטוטלת מתמטית</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #E0FFFF;
+            direction: rtl;
+        }
+        header {
+            background-color: #00CED1;
+            color: white;
+            text-align: center;
+            padding: 1em;
+            margin-bottom: 2em;
+            position: relative;
+        }
+        .caption {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-weight: bold;
+            font-size: 1.2em;
+            direction: ltr;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .interactive-example {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            background-color: #f8f8f8;
+        }
+        #pendulumCanvas {
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+        .formula {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            font-size: 1.2em;
+            margin: 10px 0;
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #00CED1;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-left: 10px;
+        }
+        button:hover {
+            background-color: #00A0A0;
+        }
+        #timerDisplay, #cycleTimeDisplay, #theoreticalTimeDisplay {
+            font-size: 1.2em;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>סימולציית מטוטלת מתמטית</h1>
+        <div class="caption">made by IrisPelled</div>
+    </header>
+    <div class="content">
+        <p>מטוטלת פשוטה היא דוגמה מצוינת ליישום טריגונומטריה בפיזיקה. התנועה שלה מתוארת על ידי פונקציית סינוס.</p>
+        <div class="formula">
+            T = 2π√(l/g)
+        </div>
+        <p>כאשר T הוא זמן המחזור, l הוא אורך המטוטלת, ו-g הוא תאוצת הכובד (9.81 מ'/שנייה²).</p>
+        <div class="interactive-example">
+            <canvas id="pendulumCanvas" width="400" height="300"></canvas>
+            <div>
+                <label for="pendulumLength">אורך המטוטלת (ס"מ):</label>
+                <input type="range" id="pendulumLength" min="50" max="200" value="100">
+                <span id="lengthDisplay">100 ס"מ</span>
+            </div>
+            <div>
+                <label for="initialAngle">זווית התחלתית (מעלות):</label>
+                <input type="range" id="initialAngle" min="0" max="90" value="30">
+                <span id="angleDisplay">30°</span>
+            </div>
+            <button id="startButton">התחל סימולציה ומדידה</button>
+            <button id="stopButton">עצור סימולציה</button>
+            <div id="timerDisplay">זמן: 0.00 שניות</div>
+            <div id="cycleCountDisplay">מספר מחזורים: 0</div>
+            <div id="theoreticalPeriodDisplay">זמן מחזור תיאורטי: 0.00 שניות</div>
+        </div>
+    </div>
+
+    <script>
+        const pendulumCanvas = document.getElementById('pendulumCanvas');
+        const pendulumCtx = pendulumCanvas.getContext('2d');
+        let pendulumLength = 100;
+        let initialAngle = 30 * Math.PI / 180;
+        let time = 0;
+        let isRunning = false;
+        let startTime;
+        let cycleCount = 0;
+        let lastDirection = 1;
+
+        function drawPendulum() {
+            pendulumCtx.clearRect(0, 0, pendulumCanvas.width, pendulumCanvas.height);
+            
+            const pivotX = pendulumCanvas.width / 2;
+            const pivotY = 50;
+            
+            const g = 9.81;  // תאוצת הכובד במטרים לשנייה בריבוע
+            const l = pendulumLength / 100;  // המרה לסנטימטרים
+            const frequency = Math.sqrt(g / l);
+            
+            let angle;
+            if (isRunning) {
+                angle = initialAngle * Math.cos(frequency * time);
+            } else {
+                angle = initialAngle;
+            }
+            
+            const bobX = pivotX + pendulumLength * Math.sin(angle);
+            const bobY = pivotY + pendulumLength * Math.cos(angle);
+            
+            // ציור המוט
+            pendulumCtx.beginPath();
+            pendulumCtx.moveTo(pivotX, pivotY);
+            pendulumCtx.lineTo(bobX, bobY);
+            pendulumCtx.strokeStyle = '#000';
+            pendulumCtx.stroke();
+            
+            // ציור המשקולת
+            pendulumCtx.beginPath();
+            pendulumCtx.arc(bobX, bobY, 10, 0, 2 * Math.PI);
+            pendulumCtx.fillStyle = '#00CED1';
+            pendulumCtx.fill();
+            
+            if (isRunning) {
+                time += 0.016;  // בהנחה של 60 פריימים לשנייה
+                
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                document.getElementById('timerDisplay').textContent = `זמן: ${elapsedTime.toFixed(2)} שניות`;
+                
+                // ספירת מחזורים
+                const currentDirection = Math.sign(Math.cos(frequency * time));
+                if (currentDirection !== lastDirection && currentDirection === 1) {
+                    cycleCount++;
+                    document.getElementById('cycleCountDisplay').textContent = `מספר מחזורים: ${cycleCount}`;
+                }
+                lastDirection = currentDirection;
+            }
+            
+            requestAnimationFrame(drawPendulum);
+        }
+
+        function updateTheoreticalPeriod() {
+            const g = 9.81;
+            const l = pendulumLength / 100;
+            const theoreticalPeriod = 2 * Math.PI * Math.sqrt(l / g);
+            document.getElementById('theoreticalPeriodDisplay').textContent = `זמן מחזור תיאורטי: ${theoreticalPeriod.toFixed(2)} שניות`;
+        }
+
+        document.getElementById('pendulumLength').addEventListener('input', function(e) {
+            pendulumLength = parseInt(e.target.value);
+            document.getElementById('lengthDisplay').textContent = pendulumLength + ' ס"מ';
+            updateTheoreticalPeriod();
+        });
+
+        document.getElementById('initialAngle').addEventListener('input', function(e) {
+            initialAngle = parseInt(e.target.value) * Math.PI / 180;
+            document.getElementById('angleDisplay').textContent = e.target.value + '°';
+        });
+
+        document.getElementById('startButton').addEventListener('click', function() {
+            isRunning = true;
+            time = 0;
+            cycleCount = 0;
+            lastDirection = 1;
+            startTime = Date.now();
+            this.textContent = 'אפס והתחל מדידה חדשה';
+        });
+
+        document.getElementById('stopButton').addEventListener('click', function() {
+            isRunning = false;
+            document.getElementById('startButton').textContent = 'התחל סימולציה ומדידה';
+        });
+
+        drawPendulum();
+        updateTheoreticalPeriod();
+    </script>
+</body></html>
